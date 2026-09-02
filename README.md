@@ -14,6 +14,12 @@ pip install -r requirements.txt
 ```
 
 ### 启动
+
+**Windows（推荐，一键启动）**：直接双击根目录 `start.bat`，按菜单选择：
+- `1` 演示模式（mock，无需 API Key，开箱即跑）
+- `2` 真实 API 模式（依次输入 API 地址 / Key / 模型名，默认 DeepSeek）
+
+**命令行（跨平台）**：
 ```bash
 # 演示模式（无需 API key，内置脚本化 FakeLLM，可完整演示 Loop / 工具 / 多窗口 / Trace）
 python run.py --mock
