@@ -23,7 +23,7 @@ if /i "%MODE%"=="real" goto :real
 if /i "%MODE%"=="mock" goto :mock
 
 set "HAS_KEY=0"
-findstr /r "^AURORA_API_KEY=.+" .env >nul 2>&1 && set "HAS_KEY=1"
+findstr /b "AURORA_API_KEY=." .env >nul 2>&1 && set "HAS_KEY=1"
 if "%HAS_KEY%"=="1" (goto :real) else (goto :mock)
 
 :mock

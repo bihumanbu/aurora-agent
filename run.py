@@ -10,7 +10,7 @@
     python run.py --api-base <url> --api-key <key> --model <name>
     python run.py --port 8001              # 自定义端口
 
-远程暴露（面试官访问）:
+远程暴露（远程访问）:
     cloudflared tunnel --url http://127.0.0.1:8000
     # 或用 scripts/demo.sh 一键完成
 """

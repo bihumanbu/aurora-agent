@@ -1,11 +1,11 @@
-"""Context 管理 — 笔试"context的有效管理"。
+"""Context 管理 — "context的有效管理"。
 
 实现：
     - 分桶模型：system | compacted_summary | rolling_history | tool_results
       再拼接成发给 LLM 的 messages。
     - 最大轮次限制 max_turns：只保留最近 max_turns 轮（user+assistant 为一轮）。
     - 基础压缩 compact：估算 token 数超阈值时，把最旧的非关键消息浓缩为一行摘要。
-      笔试注明"复杂压缩不用实现"，此处做轻量摘要（截断+保留要点）。
+      注：复杂压缩不做复杂实现，此处做轻量摘要（截断+保留要点）。
     - 追问支持：rolling_history 保留最近 N 轮，工具结果始终回注，
       "纯对话追问"与"带工具追问"都可连续。
 

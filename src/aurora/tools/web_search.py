@@ -1,6 +1,6 @@
 """web_search — 搜索工具。
 
-笔试允许 search 用 mock。提供：
+允许 search 用 mock。提供：
     - 默认内置一组示例结果（mock），便于无网/演示
     - 可通过 ``results`` 注入自定义结果提供方（模拟真实搜索引擎）
 

@@ -1,6 +1,6 @@
 """FakeLLM — 演示/测试用脚本化 LLM。
 
-无真实 API key 时以 --mock 模式驱动整个 Agent（笔试要求"真实 LLM API"，
+无真实 API key 时以 --mock 模式驱动整个 Agent（真实 LLM API 模式，
 但无 key 的现场演示、录屏、离线测试都需要可复现的 LLM 行为）。
 
 ScriptedScenario 定义一笔回复序列，步骤为四元组：

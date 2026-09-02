@@ -191,7 +191,7 @@ def test_loop_rejects_empty_input():
         asyncio.run(loop.run(Session(name="t"), "  "))
 
 
-# ── 基础压缩：真实 Loop 中触发（笔试"context 过长要有基础的压缩"）───
+# ── 基础压缩：真实 Loop 中触发（context 过长时做基础压缩）───
 
 @dataclass
 class _CompactingModel:

@@ -56,7 +56,7 @@ echo ">> 本地可访问: http://127.0.0.1:$PORT"
 if [ "$TUNNEL" = 1 ]; then
   if command -v cloudflared >/dev/null 2>&1; then
     echo ">> 正在建立 cloudflared 公网隧道 ..."
-    echo "   复制下面的 https 链接发给面试官即可远程访问："
+    echo "   复制下面的 https 链接发给远程访问者即可远程访问："
     cloudflared tunnel --url "http://127.0.0.1:$PORT"
   else
     echo "!! 未检测到 cloudflared，跳过隧道。"

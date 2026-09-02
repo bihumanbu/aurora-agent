@@ -1,4 +1,4 @@
-"""Agent Loop — 笔试核心：四步循环。
+"""Agent Loop — 核心：四步循环。
 
 Step one 接收用户输入
 Step two 判断是直接回复，还是调用工具（LLM 带工具 Schema 决策）
@@ -107,7 +107,7 @@ class AgentLoop:
         # Step one: 接收用户输入 → 写入 context（附 trace）
         session.context.append(Message(role=Role.USER, content=user_input))
         # 基础压缩：本回合 LLM 决策前，先把超出阈值的旧历史浓缩为摘要
-        # （笔试"context 过长要有基础的压缩"）。放在回合开始、工具调用之前，
+        # （context 过长要有基础的压缩）。放在回合开始、工具调用之前，
         # 可避免误删正在进行中的 tool_use/tool_result 配对。
         session.context.compact()
         session.trace.record(kind="user", session_id=session_id, payload={"content": user_input})

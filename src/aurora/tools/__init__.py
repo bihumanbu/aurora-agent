@@ -1,6 +1,6 @@
 """内置工具注册入口。
 
-register_all_tools(registry, project_root=None) 一次性注册笔试要求的
+register_all_tools(registry, project_root=None) 一次性注册要求的
 ≥3 个工具（实际 6 个函数）：
 
     calculator  — 安全算术求值（AST 白名单，拒绝任意代码执行）

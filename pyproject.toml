@@ -1,7 +1,7 @@
 [project]
 name = "aurora-agent"
 version = "1.0.0"
-description = "极光 Agent OS — 从零自研的最小可用 Agent（2026 后端 Agent 方向笔试题）"
+description = "极光 Agent OS — 从零自研的最小可用 Agent（2026 后端 Agent 方向最小可用 Agent）"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = [

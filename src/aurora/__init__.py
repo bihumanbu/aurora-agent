@@ -1,7 +1,7 @@
 """AuroraAgent — 极光 Agent OS。
 
-从零自研的最小可用 Agent（2026 后端 Agent 方向笔试题 Vibe coding 部分）。
-核心 Agent Runtime 不依赖任何第三方 agent 框架（langgraph/openhands/openclaw/PI 等）。
+从零自研的最小可用 Agent（2026 后端 Agent 方向最小可用 Agent）。
+核心 Agent Runtime 不依赖任何第三方 agent 框架（如 langgraph/autogen 等）。
 
 分层：
     aurora.runtime  — Agent Runtime（loop / registry / messages / session / context）

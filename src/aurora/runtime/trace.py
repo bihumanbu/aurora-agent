@@ -1,6 +1,6 @@
 """工具调用 trace / 执行日志。
 
-笔试题"额外要求"之一。每次工具调用都会产生结构化 TraceRecord：
+"额外要求"之一。每次工具调用都会产生结构化 TraceRecord：
     - 调用前记录 (kind=tool_call)：工具名、参数、发起时间
     - 调用后记录 (kind=tool_result / tool_error)：结果或错误、耗时
     - 会话级 answer / thinking 也入 trace，便于前端"时间线回放"
@@ -46,7 +46,7 @@ class TraceRecord:
 class TraceStore:
     """内存 trace 存储（线程安全简单实现）。
 
-    笔试"基础压缩不用复杂实现"，这里同样用基础内存实现，支撑：
+    基础压缩不做复杂实现，这里同样用基础内存实现，支撑：
         - 按 session 查询（Web 多窗口切换时各自展示）
         - recent 全量/限量（Trace 面板 + 端点）/ 回放
     """

@@ -1,7 +1,6 @@
 # AuroraAgent · 从零实现的最小可用 Agent
 
-> 光辰智能《2026 后端（Agent 方向）开发笔试题》题目一 · Vibe coding 作品。
-> 核心 Agent Runtime 从零自研，**不依赖任何 agent 框架**（langgraph / openhands / openclaw / PI 均未使用）。
+> 从零自研的最小可用 Agent：核心 Runtime 不依赖任何 agent 框架，配套 Web UI 用于工具调用可视化与多轮会话演示。
 
 ## 一、运行方式
 
@@ -15,16 +14,14 @@ pip install -r requirements.txt
 
 ### 启动
 
-**Windows（推荐，一键启动）**：直接双击根目录 `start.bat`，按菜单选择：
-- `1` 演示模式（mock，无需 API Key，开箱即跑）
-- `2` 真实 API 模式（依次输入 API 地址 / Key / 模型名，默认 DeepSeek）
+**Windows（推荐，一键启动）**：直接双击根目录 `start.bat`。脚本自动按 `.env` 是否配置 `AURORA_API_KEY` 选择真实 / 演示模式；也可 `start.bat mock` / `start.bat real` 手动指定。
 
 **命令行（跨平台）**：
 ```bash
 # 演示模式（无需 API key，内置脚本化 FakeLLM，可完整演示 Loop / 工具 / 多窗口 / Trace）
 python run.py --mock
 
-# 真实 LLM API（笔试要求）—— OpenAI 兼容厂商，以 DeepSeek 为例
+# 真实 LLM API —— OpenAI 兼容厂商，以 DeepSeek 为例
 python run.py --api-base https://api.deepseek.com/v1 --api-key sk-你的key --model deepseek-chat
 
 # 真实 LLM API —— Anthropic 兼容协议（如 DeepSeek 的 /anthropic 端点）
@@ -49,8 +46,8 @@ pytest        # 全部离线（LLM 全程 mock），147 个用例
 ### 2.2 工具注册机制与工具清单
 `src/aurora/runtime/registry.py`：每个工具绑定「名称 / 描述 / 参数 JSON Schema」，执行前轻量校验（type/required/enum/min/max）；`registry.spec()` 导出 OpenAI function-calling 格式供 LLM 自主决策调用。
 
-实现工具（满足笔试题干"至少三个工具"）：
-| 笔试题干工具 | 本实现 | 说明 |
+已实现工具（覆盖计算 / 搜索 / 天气 / 待办 / 文档等）：
+| 工具 | 本实现 | 说明 |
 |---|---|---|
 | calculator | `calculator` | 真实计算（AST 白名单求值，拒绝函数调用/导入/属性访问，防代码注入） |
 | search（可 mock） | `web_search` | mock 返回示例搜索结果 |
@@ -77,7 +74,7 @@ pytest        # 全部离线（LLM 全程 mock），147 个用例
 ### 2.7 真实 LLM API
 `src/aurora/llm/clients.py`：OpenAI 兼容多厂商 + Anthropic 兼容协议（Messages API）。API key 仅存于 `.env`（已 gitignore），不硬编码进代码。
 
-## 三、Memory 召回时机与放置方式（笔试要求）
+## 三、Memory 召回时机与放置方式
 
 ### 放置方式（分桶）
 1. **工作上下文（实时）** —— `session.context`（BucketedContext）：
@@ -96,14 +93,5 @@ pytest        # 全部离线（LLM 全程 mock），147 个用例
 | 追问（纯对话 / 带工具） | 最近 N 轮 + 最近工具结果 | 直接命中 rolling_history / tool_results 桶 |
 | context 超阈值 | 最旧非关键轮 → 轻量摘要 | 移入 compacted_summary 桶 |
 
-> 取舍：笔试明确"复杂压缩不用实现"，当前为「分桶 + 滚动窗口 + 轻量摘要」。**Context 是给 LLM 看的记忆，Trace 是给人看的审计日志**，职责分离。
+> 取舍：复杂压缩不在当前实现范围，当前为「分桶 + 滚动窗口 + 轻量摘要」。**Context 是给 LLM 看的记忆，Trace 是给人看的审计日志**，职责分离。
 
-## 四、提交物清单（对照笔试"提交内容"）
-
-| 笔试要求 | 本项目交付 |
-|---|---|
-| 真实 LLM API | `clients.py` 支持 OpenAI 兼容 / Anthropic 兼容（见一、运行方式） |
-| 代码链接 | 本仓库 |
-| 终端或网页操作录屏 | 启动 `python run.py --mock` 或真实 API，演示多窗口 / 工具调用 / Trace（建议 3~5 分钟） |
-| README（运行方式 / 系统设计 / memory 时机与放置） | 本文件 |
-| AI Prompt 与问题解决记录 | 按面试官要求单独提交（不纳入本代码仓库） |
