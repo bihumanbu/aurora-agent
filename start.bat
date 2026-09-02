@@ -1,39 +1,48 @@
-ï»¿@echo off
-chcp 65001 >nul 2>&1
-setlocal enabledelayedexpansion
-title æå…‰ Agent OS - å¯åŠ¨å™¨
+@echo off
+setlocal
+title AuroraAgent - Æô¶¯Æ÷
 cd /d "%~dp0"
 
-REM å¯åŠ¨æ¨¡å¼ï¼šå‘½ä»¤è¡Œå‚æ•°ä¼˜å…ˆï¼ˆstart.bat mock / start.bat realï¼‰
-REM å¦åˆ™æŒ‰ .env æ˜¯å¦é…ç½® AURORA_API_KEY è‡ªåŠ¨é€‰æ‹©ï¼šæœ‰åˆ™çœŸå®æ¨¡å¼ï¼Œæ— åˆ™æ¼”ç¤ºæ¨¡å¼
+REM Ì½²â python£¨python / python3 / py£©£¬±ÜÃâË«»÷Ê± PATH ²»º¬ python ¶øÉÁÍË
+set "PY=python"
+where python >nul 2>&1 || set "PY="
+if not defined PY (where python3 >nul 2>&1 && set "PY=python3")
+if not defined PY (where py >nul 2>&1 && set "PY=py")
+if not defined PY (
+  echo [´íÎó] Î´ÕÒµ½ python£¬ÇëÏÈ°²×° Python 3.11+ ²¢¼ÓÈë PATH¡£
+  echo         ÏÂÔØ£ºhttps://www.python.org  £¨°²×°Ê±¹´Ñ¡ Add python.exe to PATH£©
+  pause
+  exit /b 1
+)
+
+REM Æô¶¯Ä£Ê½£ºÃüÁîĞĞ²ÎÊıÓÅÏÈ£¨start.bat mock / start.bat real£©
+REM ·ñÔò°´ .env ÊÇ·ñÅäÖÃ AURORA_API_KEY ×Ô¶¯Ñ¡Ôñ£ºÓĞÔòÕæÊµÄ£Ê½£¬ÎŞÔòÑİÊ¾Ä£Ê½
 set "MODE=%~1"
 
 if /i "%MODE%"=="real" goto :real
 if /i "%MODE%"=="mock" goto :mock
 
 set "HAS_KEY=0"
-for /f "usebackq tokens=1,* delims==" %%A in (".env") do (
-    if /i "%%A"=="AURORA_API_KEY" (
-        if not "%%B"=="" set "HAS_KEY=1"
-    )
-)
+findstr /r "^AURORA_API_KEY=.+" .env >nul 2>&1 && set "HAS_KEY=1"
 if "%HAS_KEY%"=="1" (goto :real) else (goto :mock)
 
 :mock
 echo ================================================
-echo   â–² æå…‰ Agent OS - æ¼”ç¤ºæ¨¡å¼ (mock, æ— éœ€ API Key)
+echo   [AuroraAgent] ÑİÊ¾Ä£Ê½ (mock, ÎŞĞè API Key)
 echo ================================================
-python run.py --mock
+%PY% run.py --mock
 goto :done
 
 :real
 echo ================================================
-echo   â–² æå…‰ Agent OS - çœŸå® API æ¨¡å¼ (è¯»å– .env)
+echo   [AuroraAgent] ÕæÊµ API Ä£Ê½ (¶ÁÈ¡ .env)
 echo ================================================
-python run.py
+%PY% run.py
 goto :done
 
 :done
+set "RC=%ERRORLEVEL%"
+if not "%RC%"=="0" echo [ÌáÊ¾] ½ø³ÌÍË³öÂë %RC%£¨·ÇÖ÷¶¯¹Ø±ÕÇë²é¿´ÉÏ·½±¨´í£©
 echo.
-echo   æœåŠ¡å·²é€€å‡ºã€‚
+echo   ·şÎñÒÑÍË³ö¡£°´ÈÎÒâ¼ü¹Ø±Õ´°¿Ú...
 pause
