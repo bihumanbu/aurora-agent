@@ -31,7 +31,7 @@ python run.py --provider anthropic --api-base https://api.deepseek.com/anthropic
 
 ### 运行测试
 ```bash
-pytest        # 全部离线（LLM 全程 mock），147 个用例
+pytest        # 全部离线（LLM 全程 mock），150 个用例
 ```
 
 ## 二、系统设计

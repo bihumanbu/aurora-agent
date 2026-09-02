@@ -5,7 +5,7 @@ register_all_tools(registry, project_root=None) 一次性注册要求的
 
     calculator  — 安全算术求值（AST 白名单，拒绝任意代码执行）
     web_search  — 搜索（默认 mock，可替换 provider）
-    weather     — 天气（默认 mock，可替换 provider）
+    weather     — 天气（默认 Open-Meteo 真实数据，断网/无解时回退内置 mock）
     todo_add / todo_list / todo_done — 待办（每 registry 独立 store）
     read_docs   — 读取项目文档（限制在项目根内）
 
