@@ -1,52 +1,39 @@
-@echo off
+ï»¿@echo off
 chcp 65001 >nul 2>&1
 setlocal enabledelayedexpansion
-title ¼«¹â Agent OS - Æô¶¯Æ÷
-
+title æå…‰ Agent OS - å¯åŠ¨å™¨
 cd /d "%~dp0"
 
-echo ================================================
-echo   ¡ø ¼«¹â Agent OS - AuroraAgent Æô¶¯Æ÷
-echo ================================================
-echo.
-echo   1) ÑİÊ¾Ä£Ê½ (mock, ÎŞĞè API Key)
-echo   2) ÕæÊµ API Ä£Ê½ (DeepSeek / ÆäËû OpenAI ¼æÈİ)
-echo   3) ÍË³ö
-echo.
+REM å¯åŠ¨æ¨¡å¼ï¼šå‘½ä»¤è¡Œå‚æ•°ä¼˜å…ˆï¼ˆstart.bat mock / start.bat realï¼‰
+REM å¦åˆ™æŒ‰ .env æ˜¯å¦é…ç½® AURORA_API_KEY è‡ªåŠ¨é€‰æ‹©ï¼šæœ‰åˆ™çœŸå®æ¨¡å¼ï¼Œæ— åˆ™æ¼”ç¤ºæ¨¡å¼
+set "MODE=%~1"
 
-set /p MODE=ÇëÑ¡Ôñ (1/2/3):
+if /i "%MODE%"=="real" goto :real
+if /i "%MODE%"=="mock" goto :mock
 
-if "%MODE%"=="1" goto mock
-if "%MODE%"=="2" goto real
-if "%MODE%"=="3" exit /b 0
-goto error
+set "HAS_KEY=0"
+for /f "usebackq tokens=1,* delims==" %%A in (".env") do (
+    if /i "%%A"=="AURORA_API_KEY" (
+        if not "%%B"=="" set "HAS_KEY=1"
+    )
+)
+if "%HAS_KEY%"=="1" (goto :real) else (goto :mock)
 
 :mock
-echo.
-echo   Æô¶¯ÑİÊ¾Ä£Ê½ (mock)...
+echo ================================================
+echo   â–² æå…‰ Agent OS - æ¼”ç¤ºæ¨¡å¼ (mock, æ— éœ€ API Key)
+echo ================================================
 python run.py --mock
-goto done
+goto :done
 
 :real
-echo.
-set /p APPROACH=ÇëÊäÈë API µØÖ· (Ä¬ÈÏ https://api.deepseek.com/v1):
-if "%APPROACH%"=="" set APPROACH=https://api.deepseek.com/v1
-set /p KEY=ÇëÊäÈë API Key:
-set /p MODEL=ÇëÊäÈëÄ£ĞÍÃû (Ä¬ÈÏ deepseek-chat):
-if "%MODEL%"=="" set MODEL=deepseek-chat
-if "%KEY%"=="" (
-  echo   [ÌáÊ¾] Î´ÊäÈë Key, ½«Ê¹ÓÃ mock Ä£Ê½¼ÌĞøÑİÊ¾¡£
-  python run.py --mock
-  goto done
-)
-python run.py --api-base "%APPROACH%" --api-key "%KEY%" --model "%MODEL%"
-goto done
-
-:error
-echo   ÎŞĞ§Ñ¡Ïî£¬ÇëÖØĞÂÔËĞĞ¡£
-exit /b 1
+echo ================================================
+echo   â–² æå…‰ Agent OS - çœŸå® API æ¨¡å¼ (è¯»å– .env)
+echo ================================================
+python run.py
+goto :done
 
 :done
 echo.
-echo   ·şÎñÒÑÍË³ö¡£
+echo   æœåŠ¡å·²é€€å‡ºã€‚
 pause
