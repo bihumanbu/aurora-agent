@@ -51,7 +51,7 @@ pytest        # 全部离线（LLM 全程 mock），147 个用例
 |---|---|---|
 | calculator | `calculator` | 真实计算（AST 白名单求值，拒绝函数调用/导入/属性访问，防代码注入） |
 | search（可 mock） | `web_search` | mock 返回示例搜索结果 |
-| weather（可自定义） | `weather` | mock 返回模拟天气数据 |
+| weather（真实数据） | `weather` | Open-Meteo 实时天气（免费免 key，城市名→经纬度→实时数据；断网/无解自动回退内置 mock） |
 | todo | `todo_add` / `todo_list` / `todo_done` | 内存待办管理 |
 | read_docs | `read_docs` | 读取项目内文档（限制根目录，防路径穿越） |
 

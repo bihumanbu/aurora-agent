@@ -60,6 +60,50 @@ def test_weather_unknown_city_fallback(tool_registry):
     assert "temp_c" in r
 
 
+def _fake_open_meteo_xiamen(url: str) -> str:
+    """模拟 Open-Meteo：地理编码 + 实时天气，固定返回「厦门下雨」示例。"""
+    if "geocoding-api" in url:
+        return '{"results":[{"latitude":24.48,"longitude":118.09,"name":"厦门"}]}'
+    return '{"current":{"temperature_2m":21.5,"relative_humidity_2m":88,"weather_code":61}}'
+
+
+def test_weather_real_provider_returns_live_data():
+    from aurora.tools.weather import build_open_meteo_provider, build_weather
+
+    provider = build_open_meteo_provider(http_get=_fake_open_meteo_xiamen)
+    r = build_weather(provider=provider)("厦门")
+    assert r["mock"] is False
+    assert r["temp_c"] == 21.5
+    assert r["condition"] == "小雨"  # WMO 61 → 小雨
+    assert r["humidity"] == 88
+
+
+def test_weather_real_provider_falls_back_on_network_error():
+    from aurora.tools.weather import build_open_meteo_provider, build_weather
+
+    def boom(url: str) -> str:
+        raise RuntimeError("network down")
+
+    provider = build_open_meteo_provider(http_get=boom)
+    r = build_weather(provider=provider)("厦门")
+    assert r["mock"] is True  # 网络失败回退 mock
+    assert "temp_c" in r
+
+
+def test_weather_real_provider_unknown_city_falls_back():
+    from aurora.tools.weather import build_open_meteo_provider, build_weather
+
+    def empty(url: str) -> str:
+        if "geocoding-api" in url:
+            return '{"results":[]}'  # 城市无解
+        return "{}"
+
+    provider = build_open_meteo_provider(http_get=empty)
+    r = build_weather(provider=provider)("不存在的城市")
+    assert r["mock"] is True  # 城市无解回退 mock
+    assert "temp_c" in r
+
+
 def test_todo_add_list_done(tool_registry):
     _exec(tool_registry, "todo_add", {"text": "写周报"})
     items = _exec(tool_registry, "todo_list")["items"]

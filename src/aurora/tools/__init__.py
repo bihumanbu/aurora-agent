@@ -28,7 +28,7 @@ def register_all_tools(registry: ToolRegistry, project_root: Path | None = None)
     """
     from aurora.tools.calculator import calculator
     from aurora.tools.todo import TodoStore, build_todo_tools
-    from aurora.tools.weather import build_weather
+    from aurora.tools.weather import build_open_meteo_provider, build_weather
     from aurora.tools.web_search import build_search
 
     root = project_root or Path.cwd()
@@ -60,12 +60,12 @@ def register_all_tools(registry: ToolRegistry, project_root: Path | None = None)
 
     @registry.register(
         name="weather",
-        description="查询城市天气（演示环境为模拟数据）。",
-        params=schema({"city": {"type": "string", "description": "城市名，如 北京"}},
+        description="查询城市实时天气（数据来自 Open-Meteo，免费免 API key；网络异常时回退演示数据）。",
+        params=schema({"city": {"type": "string", "description": "城市名，如 厦门"}},
                       required=["city"]),
     )
     def _weather(city: str) -> dict[str, Any]:
-        return build_weather()(city)
+        return build_weather(provider=build_open_meteo_provider())(city)
 
     # todo 三件套：每个 registry 独立 store，实现"多窗口隔离"的工具侧
     todo_tools = build_todo_tools(TodoStore())
