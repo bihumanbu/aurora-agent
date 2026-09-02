@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>极光 Agent OS · AuroraAgent</title>
+  <link rel="stylesheet" href="/static/css/theme.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- 顶部：品牌 + 多窗口 Session 标签 -->
+    <div class="topbar">
+      <div class="brand"><span class="caret">▲</span> 极光 AGENT OS</div>
+      <div class="brand-sub">AuroraAgent · 自研 Agent Runtime</div>
+      <div class="sessions" id="sessions"></div>
+      <button class="btn-new" id="btnNewSession">＋ 新窗口</button>
+      <button class="btn-settings" id="btnSettings" title="模型设置">⚙</button>
+    </div>
+
+    <!-- 模型配置弹窗（齿轮） -->
+    <div class="modal-overlay" id="settingsModal" hidden>
+      <div class="modal">
+        <div class="modal-header">
+          <span>⚙ 模型设置</span>
+          <button class="modal-close" id="btnCloseSettings">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="field">
+            <label>提供商</label>
+            <select id="cfgProvider">
+              <option value="deepseek">DeepSeek</option>
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">DeepSeek（Anthropic 兼容）</option>
+              <option value="openai_compatible">其他（OpenAI 兼容）</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>API Base URL</label>
+            <input id="cfgBase" type="text" placeholder="https://api.deepseek.com/v1" />
+          </div>
+          <div class="field">
+            <label>API Key</label>
+            <input id="cfgKey" type="password" placeholder="sk-..." autocomplete="off" />
+          </div>
+          <div class="field">
+            <label>模型名</label>
+            <input id="cfgModel" type="text" placeholder="deepseek-chat" />
+          </div>
+          <div class="field">
+            <label>Temperature</label>
+            <input id="cfgTemp" type="number" step="0.1" min="0" max="2" value="0.3" />
+          </div>
+          <div class="cfg-status" id="cfgStatus"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-ghost" id="btnTestModel">测试连接</button>
+          <button class="btn-send" id="btnSaveModel">保存并启用</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="main">
+      <!-- 左侧：聊天 + Loop 可视化 -->
+      <div class="chat-panel">
+        <div class="messages" id="messages"></div>
+        <div class="input-area">
+          <textarea class="input-box" id="input" placeholder="输入你的问题…（如：北京天气怎么样？然后记一条待办）"
+                    rows="1"></textarea>
+          <button class="btn-send" id="btnSend">发送 ▸</button>
+        </div>
+      </div>
+
+      <!-- 右侧：工具 Trace 审计面板 -->
+      <div class="trace-panel">
+        <div class="trace-header">
+          <span>⌕ 工具调用 Trace</span>
+          <span class="trace-count" id="traceCount">0</span>
+        </div>
+        <div class="trace-list" id="traceList">
+          <div class="trace-hint">每次工具调用都会在这里留下结构化记录 —— 参数、耗时、成功/失败。</div>
+        </div>
+        <div class="trace-hint">· 实时回放 Agent 的思考与工具执行轨迹</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/main.js"></script>
+</body>
+</html>

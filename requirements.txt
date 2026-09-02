@@ -1,0 +1,9 @@
+# AuroraAgent 运行时依赖（核心 Runtime 零 agent 框架，全部自研）
+fastapi>=0.111
+uvicorn[standard]>=0.30
+httpx>=0.27
+pydantic>=2.7
+
+# 开发/测试
+pytest>=8.0
+pytest-asyncio>=0.23
