@@ -184,6 +184,45 @@ def test_tool_result_fed_back_to_model():
     assert "tool" in roles
 
 
+def test_single_turn_two_sequential_tool_calls_state_chain():
+    """轮次 E 终轮回归：一条用户消息触发两个连续工具调用，且后者能看到前者的副作用。
+
+    这是之前 Anthropic 400 的高危形态（单条 assistant 带两个 tool_use）。
+    既要 Loop 能顺序执行两个工具，又要后一个工具读到前一个的写入结果。
+    """
+    r = ToolRegistry()
+    _store: list[str] = []
+
+    @r.register(name="add_todo", description="加待办",
+               params={"type": "object", "properties": {"text": {"type": "string"}},
+                       "required": ["text"]})
+    def add_todo(text: str) -> dict:
+        _store.append(text)
+        return {"ok": True, "item": text}
+
+    @r.register(name="list_todo", description="列待办")
+    def list_todo() -> dict:
+        return {"ok": True, "items": list(_store)}
+
+    model = FakeModel(replies=[
+        ParsedOutput(kind="tool_calls", tool_calls=[
+            ToolCall(id="c1", name="add_todo", arguments={"text": "复习 Java 并发面试题"}),
+            ToolCall(id="c2", name="list_todo", arguments={}),
+        ]),
+        ParsedOutput(kind="answer", content="已加入并列出"),
+    ])
+    loop = _make(model, registry=r, settings=LoopSettings(max_iters=5))
+    session = Session(name="终轮")
+    result = asyncio.run(loop.run(
+        session, '把"复习 Java 并发面试题"加入待办，然后列出全部待办'))
+    assert result.success
+    tool_evts = [e for e in loop.events if e.kind.value == "tool_call"]
+    assert [e.payload["tool"] for e in tool_evts] == ["add_todo", "list_todo"]
+    # 列表工具的结果里必须包含刚加的项（状态串联生效）
+    tr_events = [e for e in loop.events if e.kind.value == "tool_result"]
+    assert any("复习 Java 并发面试题" in str(e.payload.get("result")) for e in tr_events)
+
+
 def test_loop_rejects_empty_input():
     model = FakeModel(replies=[ParsedOutput(kind="answer", content="x")])
     loop = _make(model)

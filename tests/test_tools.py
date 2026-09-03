@@ -138,8 +138,12 @@ def test_read_docs_missing_file(tool_registry):
 
 
 def test_read_docs_path_variants(tool_registry):
-    """模型常给裸文件名 / doc/ 前缀 / docs/ 前缀，均应解析命中（见 bug 复现）。"""
-    for path in ("DESIGN.md", "doc/DESIGN.md", "README.md", "docs/README.md"):
+    """模型常给裸文件名 / doc/ 前缀 / docs/ 前缀，均应解析命中（见 bug 复现）。
+
+    注：doc/DESIGN.md 已移入内部过程文档（不纳入提交），改用提交文档
+    doc/AI_LOG.md 验证「裸文件名 → doc/ 前缀」解析。
+    """
+    for path in ("AI_LOG.md", "doc/AI_LOG.md", "README.md", "docs/README.md"):
         r = _exec(tool_registry, "read_docs", {"path": path})
         assert r.get("found") is True, f"{path} 应命中，实际: {r}"
     # 缺扩展名 / 错误写法应失败（不越权、不崩溃）
