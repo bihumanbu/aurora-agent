@@ -259,7 +259,20 @@ def _to_anthropic_messages(messages: list[dict], tool_cache: dict) -> list[dict]
                     args = {}
                 blocks.append({"type": "tool_use", "id": tc_id, "name": name, "input": args})
                 tool_ids.append(tc_id)
-            out.append({"role": "assistant", "content": blocks or [{"type": "text", "text": ""}]})
+            # 空 text 块 Anthropic 会拒收，统一剔除
+            blocks = [b for b in blocks if not (b.get("type") == "text" and not b.get("text"))]
+            if out and out[-1]["role"] == "assistant":
+                # 合并相邻 assistant（如「只有 reasoning 的 assistant」+「带 tool_calls 的
+                # assistant」），满足角色交替。安全依据：若上一条 assistant 带 tool_calls，
+                # 其后必然已紧跟 user(tool_result)，此时 out[-1] 是 user 而非 assistant。
+                prev = out[-1]["content"]
+                if isinstance(prev, list):
+                    merged = prev + blocks
+                else:
+                    merged = ([{"type": "text", "text": prev}] if prev else []) + blocks
+                out[-1]["content"] = merged or [{"type": "text", "text": ""}]
+            else:
+                out.append({"role": "assistant", "content": blocks or [{"type": "text", "text": ""}]})
             # 紧跟 tool_result：与其 tool_use 配对，缺失补占位避免 400
             if tool_ids:
                 tr_blocks: list[dict] = []

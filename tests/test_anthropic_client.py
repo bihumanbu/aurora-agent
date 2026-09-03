@@ -294,3 +294,45 @@ def test_to_anthropic_messages_missing_result_gets_placeholder():
     assert tr["tool_use_id"] == "tc_x"
     assert tr.get("is_error") is True
 
+
+def test_to_anthropic_messages_roles_strictly_alternate():
+    """角色必须严格交替（Anthropic 硬约束）。
+
+    Loop 对「reasoning + tool_calls」会连写两条 assistant（一条仅 reasoning、
+    一条带 tool_calls）。若不合并，就会出现相邻同角色 → Anthropic 400。
+    本测试锁定：任意输入下输出都不得出现相邻同角色。
+    """
+    msgs = [
+        {"role": "user", "content": "读一下设计文档"},
+        # 第 1 轮：仅 reasoning 的 assistant + 带 tool_calls 的 assistant（相邻）
+        {"role": "assistant", "content": "", "reasoning_content": "先查天气"},
+        {"role": "assistant", "content": "",
+         "tool_calls": [{"id": "tc_1", "type": "function",
+                         "function": {"name": "weather", "arguments": '{"city":"厦门"}'}}]},
+        {"role": "tool", "content": '{"temp_c":27.7}', "tool_call_id": "tc_1"},
+        # 第 2 轮：同理，且带两个 tool_calls
+        {"role": "assistant", "content": "", "reasoning_content": "读文档"},
+        {"role": "assistant", "content": "",
+         "tool_calls": [{"id": "tc_2", "type": "function",
+                         "function": {"name": "read_docs", "arguments": '{"path":"DESIGN.md"}'}},
+                        {"id": "tc_3", "type": "function",
+                         "function": {"name": "read_docs", "arguments": '{"path":"README.md"}'}}]},
+        {"role": "tool", "content": "[DESIGN]", "tool_call_id": "tc_2"},
+        {"role": "tool", "content": "[README]", "tool_call_id": "tc_3"},
+    ]
+    out = _to_anthropic_messages(msgs, {})
+
+    roles = [m["role"] for m in out]
+    adjacent = [(i - 1, i) for i in range(1, len(roles)) if roles[i - 1] == roles[i]]
+    assert not adjacent, f"出现相邻同角色: {adjacent}"
+
+    # reasoning 必须与 tool_use 合并进同一条 assistant（不能各自独立）
+    assert len(out) == 5, f"期望 5 条（user+a,tr,a,tr），实际 {len(out)}: {roles}"
+    assert out[1]["content"][0]["type"] == "text"          # reasoning 合并进来
+    assert out[1]["content"][1]["type"] == "tool_use"
+    # 空 text 块必须剔除（Anthropic 拒收空 text）
+    for m in out:
+        for b in m["content"]:
+            if b["type"] == "text":
+                assert b["text"], "存在空 text 块"
+
