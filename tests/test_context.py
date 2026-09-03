@@ -46,6 +46,34 @@ def test_append_tool_result_capped():
     assert ctx._tool_results[0].content == "r2"
 
 
+def test_tool_results_cap_covers_full_demo_session():
+    """一次典型演示（10~15 次工具调用）的早期结果不应被挤出桶。
+
+    挤出本身不会让协议报错（转换层补 is_error 占位），但模型会读到
+    "工具结果缺失"，导致追问前面的调用时答不上来——这是体验缺陷，
+    故要求默认容量能覆盖完整演示。
+    """
+    from aurora.llm.clients import _to_anthropic_messages
+
+    ctx = BucketedContext()
+    for i in range(15):
+        ctx.append(_u(f"第{i}轮问题"))
+        ctx.append(Message(role=Role.ASSISTANT, content="",
+                           tool_calls=[{"id": f"c{i}", "name": "weather",
+                                        "arguments": {"city": "厦门"}}]))
+        ctx.append(Message(role=Role.TOOL, content=f'{{"temp_c": {20 + i}}}',
+                           name="weather", tool_call_id=f"c{i}"))
+    assert len(ctx._tool_results) == 15  # 未触发上限
+
+    out = _to_anthropic_messages([m.to_api_dict() for m in ctx.build_messages()], {})
+    placeholders = [
+        b for m in out if m["role"] == "user" and isinstance(m["content"], list)
+        for b in m["content"]
+        if b.get("type") == "tool_result" and b.get("is_error")
+    ]
+    assert placeholders == []
+
+
 def test_system_message_bucket():
     ctx = BucketedContext()
     ctx.set_system("你是助手")

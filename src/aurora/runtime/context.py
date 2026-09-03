@@ -47,7 +47,11 @@ class BucketedContext:
         self._system: Message | None = None
         self._summary: list[str] = []        # compacted_summary 桶
         self._tool_results: list[Message] = []  # tool_results 桶（只留最近）
-        self._tool_results_cap = 8
+        # 容量取 24：一次典型多轮演示（计算器+天气+待办增删改查+读文档+多窗口）
+        # 约 10~15 次工具调用，留足余量后早期结果不会被挤出。
+        # 挤出并不破坏协议（转换层会补 is_error 占位，不会 400），但模型会
+        # 读到"工具结果缺失"，导致追问早期调用时答不上来，故适当放大。
+        self._tool_results_cap = 24
         self._total_turns = 0
 
     @property
