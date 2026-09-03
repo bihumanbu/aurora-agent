@@ -2,6 +2,43 @@
 
 > 从零自研的最小可用 Agent：核心 Runtime 不依赖任何 agent 框架，配套 Web UI 用于工具调用可视化与多轮会话演示。
 
+## 目录结构
+
+```
+AuroraAgent/
+├── run.py                  # 启动入口（Web 服务 + Agent Runtime）
+├── start.bat               # Windows 一键启动（自动按 .env 判断是否走真实模式）
+├── requirements.txt        # 运行时依赖
+├── pyproject.toml          # 打包与 pytest 配置
+├── .env.example            # 环境变量样例（.env 已 gitignore，不入库）
+├── src/aurora/             # 源码
+│   ├── runtime/            # 自研 Agent Runtime（核心，不依赖任何 agent 框架）
+│   │   ├── loop.py         #   四步循环主循环
+│   │   ├── registry.py     #   工具注册 + 参数 Schema 校验
+│   │   ├── context.py      #   Context 分桶 / 滚动 / 压缩（记忆的放置与召回）
+│   │   ├── session.py      #   多窗口 Session 管理
+│   │   ├── messages.py     #   消息 / 事件 / ToolCall 数据结构
+│   │   └── trace.py        #   Trace 审计记录
+│   ├── llm/                # LLM 接入层
+│   │   ├── clients.py      #   OpenAI 兼容 + Anthropic 兼容客户端
+│   │   ├── gateway.py      #   统一网关与配置（演示 / 真实模式切换）
+│   │   ├── parsing.py      #   模型输出解析（function-call / 文本 JSON 双路兜底）
+│   │   └── fake.py         #   演示用脚本化 FakeLLM（--mock 模式）
+│   ├── tools/              # 内置工具
+│   │   ├── calculator.py   #   AST 白名单求值（真实，防代码注入）
+│   │   ├── weather.py      #   Open-Meteo 实时天气（真实，断网回退）
+│   │   ├── todo.py         #   待办 add / list / done（真实，内存）
+│   │   ├── read_docs.py    #   读取项目文档（真实，限根目录防穿越）
+│   │   └── web_search.py   #   搜索（mock，设计要求允许）
+│   ├── web/                # FastAPI + WebSocket 服务端（上行 RPC / 下行事件）
+│   ├── ui/                 # Web UI：原生 HTML/CSS/JS，零构建
+│   └── exceptions.py       # 结构化异常（工具/LLM 错误不中断 Loop）
+├── tests/                  # 155 个离线 pytest 用例
+├── scripts/demo.sh         # Linux / macOS 启动脚本
+└── doc/                    # 提交说明文档：AI 使用记录、架构设计作答
+                            # （随提交物单独提供，不纳入代码仓库）
+```
+
 ## 一、运行方式
 
 ### 环境要求
