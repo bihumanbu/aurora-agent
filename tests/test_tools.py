@@ -137,6 +137,16 @@ def test_read_docs_missing_file(tool_registry):
     assert "error" in r or "found" in str(r).lower()
 
 
+def test_read_docs_path_variants(tool_registry):
+    """模型常给裸文件名 / doc/ 前缀 / docs/ 前缀，均应解析命中（见 bug 复现）。"""
+    for path in ("DESIGN.md", "doc/DESIGN.md", "README.md", "docs/README.md"):
+        r = _exec(tool_registry, "read_docs", {"path": path})
+        assert r.get("found") is True, f"{path} 应命中，实际: {r}"
+    # 缺扩展名 / 错误写法应失败（不越权、不崩溃）
+    miss = _exec(tool_registry, "read_docs", {"path": "doc/DESIGN"})
+    assert miss.get("found") is False
+
+
 def test_all_builtin_tools_registered(tool_registry):
     names = set(tool_registry.list())
     assert {"calculator", "web_search", "weather", "todo_add", "todo_list",

@@ -244,3 +244,53 @@ def test_anthropic_loop_tool_call_integration():
     # 第二轮请求里必须重建出 tool_use 块（否则 Anthropic 会拒收 tool_result）
     assert len(client._tool_cache) == 1
 
+
+def test_to_anthropic_messages_orphan_tool_use_is_paired():
+    """协议级兜底：即使上游 build_messages 因 compact/trim 把 tool_result 错位到
+    末尾（unmatched），转换层也必须按 tool_call_id 全局配对，绝不产生孤立 tool_use。
+
+    这是修复「tool_use ids were found without tool_result」400 复发的核心。
+    """
+    msgs = [
+        {"role": "user", "content": "读文档"},
+        {"role": "assistant", "content": "",
+         "tool_calls": [{"id": "tc_1", "type": "function",
+                         "function": {"name": "read_docs", "arguments": '{"path":"DESIGN.md"}'}}]},
+        # 故意不紧跟 role=tool，模拟归位失败 + 跨轮追问
+        {"role": "user", "content": "继续"},
+        {"role": "assistant", "content": "",
+         "tool_calls": [{"id": "tc_2", "type": "function",
+                         "function": {"name": "read_docs", "arguments": "{}"}}]},
+        # tool 结果错位到末尾
+        {"role": "tool", "content": "[DESIGN 内容]", "tool_call_id": "tc_1"},
+        {"role": "tool", "content": "[工具错误]", "tool_call_id": "tc_2"},
+    ]
+    out = _to_anthropic_messages(msgs, {})
+    # 每条 assistant 后必须紧跟 user 且含对应 tool_result
+    for i, m in enumerate(out):
+        if m["role"] == "assistant":
+            assert i + 1 < len(out) and out[i + 1]["role"] == "user", f"msg[{i}] 后缺 user"
+            trs = [x for x in out[i + 1]["content"] if x["type"] == "tool_result"]
+            assert trs, f"msg[{i}] 后无 tool_result"
+            for b in m["content"]:
+                if b["type"] == "tool_use":
+                    assert any(t["tool_use_id"] == b["id"] for t in trs), f"孤立 {b['id']}"
+
+
+def test_to_anthropic_messages_missing_result_gets_placeholder():
+    """tool_use 完全没有对应 tool_result 时（极端边界），补 is_error 占位，
+    保证发给 Anthropic 的请求合法、不 400（而非漏发导致 400）。"""
+    msgs = [
+        {"role": "user", "content": "hi"},
+        {"role": "assistant", "content": "",
+         "tool_calls": [{"id": "tc_x", "type": "function",
+                         "function": {"name": "read_docs", "arguments": "{}"}}]},
+    ]
+    out = _to_anthropic_messages(msgs, {})
+    assert out[1]["role"] == "assistant"
+    assert out[2]["role"] == "user"
+    tr = out[2]["content"][0]
+    assert tr["type"] == "tool_result"
+    assert tr["tool_use_id"] == "tc_x"
+    assert tr.get("is_error") is True
+

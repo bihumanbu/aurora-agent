@@ -194,16 +194,44 @@ def _to_anthropic_tools(tools: list[dict]) -> list[dict]:
 
 
 def _to_anthropic_messages(messages: list[dict], tool_cache: dict) -> list[dict]:
-    """把 OpenAI 格式消息转成 Anthropic 格式。
+    """把 OpenAI 格式消息转成 Anthropic 格式（协议级兜底，绝不 400）。
 
-    app 的 Loop 现在会把「带 tool_calls 的 assistant 消息」一并存入 context
-    （见 runtime/loop.py），因此这里直接读取 assistant 的 tool_calls 渲染成
-    tool_use 块，并把紧随其后的 role=tool 消息渲染成 tool_result。二者由
-    context.build_messages 保证相邻，天然满足 Anthropic「tool_use 必须紧跟
-    tool_result」的硬约束，不再依赖 tool_cache 重建（那是旧版在多轮下会 400 的根因）。
+    Anthropic 两条硬约束：
+      1. 角色严格交替（user / assistant 不可相邻重复）；
+      2. 每个 tool_use 块必须紧随其后有一个 user 消息承载对应 tool_result。
+
+    旧实现依赖 context.build_messages 把 tool_result「相邻归位」到 assistant 之后，
+    一旦上游因跨轮累积触发 compact/trim、或 assistant(tool_calls) 与 tool_result
+    错位，就出现孤立 tool_use → 400。这里改为**完全自包含**地重建：
+      - 先扫描全部 role=tool 消息，建立 tool_call_id → 结果内容 的全局映射；
+      - 渲染每条 assistant 的 tool_use 后，**立即**输出一个 user(tool_result)
+        消息（缺失则补 is_error 占位），从根本上消除「相邻依赖」带来的 400。
+      - 真实 user 文本合并进紧邻的 user 消息（可与 tool_result 共存于一个
+        user 消息的多个 block），保证角色交替。
     tool_cache 仍由 _parse_anthropic_response 维护，作为兜底（本函数不再读取）。
     """
+    # 1) 全局收集 tool_result：tool_call_id -> content
+    results: dict[str, str] = {}
+    for m in messages:
+        if m.get("role") == "tool":
+            rid = m.get("tool_call_id") or ""
+            if rid:
+                results[rid] = str(m.get("content") or "")
+
     out: list[dict] = []
+
+    def _append_user_text(text: str) -> None:
+        """真实用户输入：化为 text 块并入 user 消息（与前面 tool_result 合并）。"""
+        block = {"type": "text", "text": text}
+        if out and out[-1]["role"] == "user":
+            prev = out[-1]["content"]
+            if isinstance(prev, list):
+                out[-1]["content"] = prev + [block]
+            else:
+                out[-1]["content"] = [{"type": "text", "text": prev}, block]
+        else:
+            out.append({"role": "user", "content": [block]})
+
     for m in messages:
         role = m.get("role")
         if role == "system":
@@ -216,6 +244,7 @@ def _to_anthropic_messages(messages: list[dict], tool_cache: dict) -> list[dict]
                 blocks.append({"type": "text", "text": str(content)})
             if reasoning:
                 blocks.append({"type": "text", "text": str(reasoning)})
+            tool_ids: list[str] = []
             for tc in (m.get("tool_calls") or []):
                 fn = tc.get("function", tc) if isinstance(tc, dict) else {}
                 tc_id = tc.get("id") if isinstance(tc, dict) else None
@@ -229,45 +258,35 @@ def _to_anthropic_messages(messages: list[dict], tool_cache: dict) -> list[dict]
                 elif args is None:
                     args = {}
                 blocks.append({"type": "tool_use", "id": tc_id, "name": name, "input": args})
+                tool_ids.append(tc_id)
             out.append({"role": "assistant", "content": blocks or [{"type": "text", "text": ""}]})
+            # 紧跟 tool_result：与其 tool_use 配对，缺失补占位避免 400
+            if tool_ids:
+                tr_blocks: list[dict] = []
+                for tid in tool_ids:
+                    if tid in results:
+                        tr_blocks.append({
+                            "type": "tool_result",
+                            "tool_use_id": tid,
+                            "content": results[tid],
+                        })
+                    else:
+                        tr_blocks.append({
+                            "type": "tool_result",
+                            "tool_use_id": tid,
+                            "content": "(工具结果缺失，已自动占位)",
+                            "is_error": True,
+                        })
+                out.append({"role": "user", "content": tr_blocks})
         elif role == "user":
-            out.append({"role": "user", "content": m.get("content") or ""})
-        elif role == "tool":
-            tc_id = m.get("tool_call_id") or ""
-            out.append({
-                "role": "user",
-                "content": [{
-                    "type": "tool_result",
-                    "tool_use_id": tc_id,
-                    "content": str(m.get("content") or ""),
-                }],
-            })
-    return _merge_consecutive(out)
-
-
-def _merge_consecutive(messages: list[dict]) -> list[dict]:
-    """合并相邻同角色消息（Anthropic 要求角色交替）。
-
-    修复旧版 bug：当相邻 user 消息一条是纯文本字符串、一条是 tool_result 列表时，
-    旧逻辑因类型不一致直接丢弃 tool_result，导致 Anthropic 报 400
-    （tool_use 之后缺少 tool_result）。这里把字符串统一转成 text 块再合并。
-    """
-    merged: list[dict] = []
-    for m in messages:
-        if merged and merged[-1]["role"] == m["role"]:
-            prev = merged[-1]
-            pc, cc = prev["content"], m["content"]
-            if isinstance(pc, str) and isinstance(cc, str):
-                prev["content"] = pc + "\n" + cc
-            elif isinstance(pc, list) and isinstance(cc, list):
-                prev["content"] = pc + cc
-            elif isinstance(pc, str) and isinstance(cc, list):
-                prev["content"] = [{"type": "text", "text": pc}] + cc
-            elif isinstance(pc, list) and isinstance(cc, str):
-                prev["content"] = pc + [{"type": "text", "text": cc}]
-        else:
-            merged.append(m)
-    return merged
+            text = m.get("content") or ""
+            if text:
+                _append_user_text(str(text))
+            elif not (out and out[-1]["role"] == "user"):
+                # 空 user 也补一个空块，避免破坏角色交替
+                out.append({"role": "user", "content": [{"type": "text", "text": ""}]})
+        # role == "tool" 已在 results 收集，跳过
+    return out
 
 
 def _parse_anthropic_response(data: dict, tool_cache: dict) -> ParsedOutput:

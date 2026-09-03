@@ -48,14 +48,32 @@ class DocsReader:
             return False
 
     def _resolve_safe(self, path: str) -> Path | None:
-        """解析路径且阻止目录穿越（.. 逃逸到 doc/ 之外）。"""
+        """解析路径且阻止目录穿越（.. 逃逸到 doc/ 之外）。
+
+        兼容模型常给的多种写法：裸文件名（DESIGN.md）、doc/ 前缀
+        （doc/DESIGN.md）、docs/ 前缀（docs/README.md）都能命中。做法是
+        先剥离前导 doc/ 或 docs/ 前缀得到归一化相对路径，再与 base_dirs
+        逐一组合尝试，命中即以根目录为边界返回。
+        """
         p = Path(path)
         if p.is_absolute() or ".." in p.parts:
             return None
+        # 剥离前导 doc/ 或 docs/（base 已指向对应目录，避免叠成 doc/doc/）
+        rel = p
+        if rel.parts and rel.parts[0].lower() in ("doc", "docs"):
+            rel = Path(*rel.parts[1:]) if len(rel.parts) > 1 else Path("")
+        variants = []
+        if rel != Path(""):
+            variants.append(rel)
+        variants.append(p)  # 原始写法也尝试一次
+        # 优先返回真实存在的文件：先收集所有「在根内且存在」的候选，命中即返回；
+        # 不存在则返回 None（绝不返回「合法但不存在」的路径，否则 DESIGN.md 命中
+        # 了 root/doc/ 下的误判路径、而 root/README.md 反而取不到）。
         for base in self.base_dirs:
-            cand = base / p
-            if self._inside_root(cand):
-                return cand
+            for v in variants:
+                cand = base / v
+                if self._inside_root(cand) and cand.is_file():
+                    return cand
         return None
 
 
