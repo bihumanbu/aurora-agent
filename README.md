@@ -33,7 +33,7 @@ AuroraAgent/
 │   ├── web/                # FastAPI + WebSocket 服务端（上行 RPC / 下行事件）
 │   ├── ui/                 # Web UI：原生 HTML/CSS/JS，零构建
 │   └── exceptions.py       # 结构化异常（工具/LLM 错误不中断 Loop）
-├── tests/                  # 155 个离线 pytest 用例
+├── tests/                  # 156 个离线 pytest 用例
 ├── scripts/demo.sh         # Linux / macOS 启动脚本
 └── doc/                    # 提交说明文档：AI 使用记录、架构设计作答
                             # （随提交物单独提供，不纳入代码仓库）
@@ -68,7 +68,7 @@ python run.py --provider anthropic --api-base https://api.deepseek.com/anthropic
 
 ### 运行测试
 ```bash
-pytest        # 全部离线（LLM 全程 mock），155 个用例
+pytest        # 全部离线（LLM 全程 mock），156 个用例
 ```
 
 ## 二、系统设计
